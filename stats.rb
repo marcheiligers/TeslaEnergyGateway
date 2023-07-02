@@ -116,9 +116,15 @@ class Poller
     `afplay /System/Library/PrivateFrameworks/ScreenReader.framework/Versions/A/Resources/Sounds/#{sound}.aiff &`
   end
 
+  def poll
+    @gw.power.merge(@gw.level).merge({ timestamp: Time.now.to_i }).tap do |data|
+      File.open("data-#{Time.now.strftime('%Y-%m-%d')}.jsonl", 'a') { |f| f.puts JSON.dump(data) }
+    end
+  end
+
   def start
     while true
-      data = @gw.power.merge(@gw.level)
+      data = poll
 
       if @producing && data[:solar] < 1
         @producing = false
