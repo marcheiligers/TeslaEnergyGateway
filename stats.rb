@@ -21,6 +21,8 @@ class Gateway
     uri = URI.parse("https://#{pw_ip}")
     @http = Net::HTTP.new(uri.host, uri.port)
     @http.use_ssl = true
+    # @http.ssl_version = 'SSLv3'
+    # @http.ciphers = 'AEAD-CHACHA20-POLY1305-SHA256'
     @http.verify_mode = OpenSSL::SSL::VERIFY_NONE
 
     cache_login
@@ -103,9 +105,17 @@ class Slack
     @http.use_ssl = true
   end
 
-  def notify(message)
+  def alert(message)
+    notify(message, alert: true)
+  end
+
+  def info(message)
+    notify(message, alert: false)
+  end
+
+  def notify(message, alert: true) # rubocop:disable Metrics/MethodLength
     body = {
-      'channel' => '#homestuff',
+      'channel' => alert ? '#homestuff' : '#homestuff-monitor',
       'username' => 'Teslabot',
       'text' => message,
       'icon_emoji' => ':robot_face:'
@@ -171,15 +181,15 @@ class Poller
       if @producing && data[:solar] < 1
         @producing = false
         play('Error')
-        @slack.notify(':no_entry_sign: No production :bangbang:')
+        @slack.alert(':no_entry_sign: No production :bangbang:')
       elsif !@producing && data[:solar] > 1
         @producing = true
         play('Focus2')
-        @slack.notify(":sunny: Production started :sunny: #{draw(data[:solar])}")
+        @slack.alert(":sunny: Production started :sunny: #{draw(data[:solar])}")
       end
 
       if [0, 15, 30, 45].include?(Time.now.min)
-        @slack.notify(":sunny: #{draw(data[:solar])}  :battery: #{draw(data[:battery])} [#{data[:app].round(1)}%]  :house: #{draw(data[:house])}  :zap: #{draw(data[:grid])}")
+        @slack.info(":sunny: #{draw(data[:solar])}  :battery: #{draw(data[:battery])} [#{data[:app].round(1)}%]  :house: #{draw(data[:house])}  :zap: #{draw(data[:grid])}")
       end
 
       puts `clear`
