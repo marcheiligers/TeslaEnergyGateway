@@ -171,11 +171,15 @@ class Poller
       if @producing && data[:solar] < 1
         @producing = false
         play('Error')
-        @slack.notify('No production', ':no_entry_sign:')
+        @slack.notify("No production :bangbang:", ':no_entry_sign:')
       elsif !@producing && data[:solar] > 1
         @producing = true
         play('Focus2')
-        @slack.notify('Production started', ':sunny:')
+        @slack.notify("Production started :sunny: #{draw(data[:solar])}", ':sunny:')
+      end
+
+      if [0, 15, 30, 45].include?(Time.now.min)
+        @slack.notify(":sunny: #{draw(data[:solar])}  :battery: #{draw(data[:battery])} [#{data[:app].round(1)}%]  :house: #{draw(data[:house])}  :zap: #{draw(data[:grid])}", ':information_source:')
       end
 
       puts `clear`
