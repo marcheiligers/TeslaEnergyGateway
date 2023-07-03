@@ -96,12 +96,39 @@ class Gateway
   end
 end
 
+class Slack
+  def initialize
+    @uri = URI.parse(ENV['GW_SLACK'])
+    @http = Net::HTTP.new(@uri.host, @uri.port)
+    @http.use_ssl = true
+  end
+
+  def notify(message, emoji)
+    body = {
+      'channel' => '#homestuff',
+      'username' => 'Teslabot',
+      'text' => message,
+      'icon_emoji' => emoji
+    }
+
+    request = Net::HTTP::Post.new(@uri.path)
+    request.body = JSON.dump(body)
+    response = @http.request(request)
+
+    if response.code != '200'
+      puts "Error #{response.code}"
+      puts response.body
+    end
+  end
+end
+
 class Poller
   POLL_EVERY = 59 # Once a minute with ~1s request time
   RETRY_AFTER = 5
 
   def initialize
     @gw = Gateway.new
+    @slack = Slack.new
     @producing = true
   end
 
@@ -131,7 +158,7 @@ class Poller
 
   def count_down(time)
     while time > 0
-      print "\r#{time -= 1}s  "
+      print "\r#{(time -= 1) + 1}s  "
       sleep 1
     end
     puts
@@ -144,9 +171,11 @@ class Poller
       if @producing && data[:solar] < 1
         @producing = false
         play('Error')
+        @slack.notify('No production', ':no_entry_sign:')
       elsif !@producing && data[:solar] > 1
         @producing = true
         play('Focus2')
+        @slack.notify('Production started', ':sunny:')
       end
 
       puts `clear`
