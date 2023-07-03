@@ -97,6 +97,9 @@ class Gateway
 end
 
 class Poller
+  POLL_EVERY = 59 # Once a minute with ~1s request time
+  RETRY_AFTER = 5
+
   def initialize
     @gw = Gateway.new
     @producing = true
@@ -120,6 +123,18 @@ class Poller
     @gw.power.merge(@gw.level).merge({ timestamp: Time.now.to_i }).tap do |data|
       File.open("data-#{Time.now.strftime('%Y-%m-%d')}.jsonl", 'a') { |f| f.puts JSON.dump(data) }
     end
+  rescue => e
+    puts "Error: #{e.message}"
+    count_down(RETRY_AFTER)
+    retry
+  end
+
+  def count_down(time)
+    while time > 0
+      print "\r#{time -= 1}s  "
+      sleep 1
+    end
+    puts
   end
 
   def start
@@ -140,7 +155,7 @@ class Poller
       puts "🏠 #{draw(data[:house])}"
       puts "⚡️ #{draw(data[:grid])}"
 
-      sleep 1
+      count_down(POLL_EVERY)
     end
   end
 end
