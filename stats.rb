@@ -103,12 +103,12 @@ class Slack
     @http.use_ssl = true
   end
 
-  def notify(message, emoji)
+  def notify(message)
     body = {
       'channel' => '#homestuff',
       'username' => 'Teslabot',
       'text' => message,
-      'icon_emoji' => emoji
+      'icon_emoji' => ':robot_face:'
     }
 
     request = Net::HTTP::Post.new(@uri.path)
@@ -171,15 +171,15 @@ class Poller
       if @producing && data[:solar] < 1
         @producing = false
         play('Error')
-        @slack.notify("No production :bangbang:", ':no_entry_sign:')
+        @slack.notify(':no_entry_sign: No production :bangbang:')
       elsif !@producing && data[:solar] > 1
         @producing = true
         play('Focus2')
-        @slack.notify("Production started :sunny: #{draw(data[:solar])}", ':sunny:')
+        @slack.notify(":sunny: Production started :sunny: #{draw(data[:solar])}")
       end
 
       if [0, 15, 30, 45].include?(Time.now.min)
-        @slack.notify(":sunny: #{draw(data[:solar])}  :battery: #{draw(data[:battery])} [#{data[:app].round(1)}%]  :house: #{draw(data[:house])}  :zap: #{draw(data[:grid])}", ':information_source:')
+        @slack.notify(":sunny: #{draw(data[:solar])}  :battery: #{draw(data[:battery])} [#{data[:app].round(1)}%]  :house: #{draw(data[:house])}  :zap: #{draw(data[:grid])}")
       end
 
       puts `clear`
