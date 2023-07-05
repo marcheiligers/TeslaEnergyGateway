@@ -3,6 +3,8 @@
 require 'net/http'
 require 'uri'
 require 'json'
+require_relative 'indexer'
+require_relative 'util'
 
 class Gateway
   API = {
@@ -132,31 +134,9 @@ class Slack
   end
 end
 
-class Indexer
-  def initialize(debug: false)
-    @uri = URI.parse(ENV['GW_ES_URL'])
-    @headers = {
-      'Authorization' => "ApiKey #{ENV['GW_ES_API_KEY']}",
-      'Content-Type' => 'application/json'
-    }
-    @http = Net::HTTP.new(@uri.host, @uri.port)
-    @http.use_ssl = true
-    @debug = debug
-  end
-
-  def index(doc)
-    request = Net::HTTP::Post.new('/energy_gateway/_doc/', @headers)
-    request.body = JSON.dump(doc)
-    response = @http.request(request)
-    if @debug
-      puts response.code
-      puts response.body
-    end
-    JSON.parse(response.body)
-  end
-end
-
 class Poller
+  include Util
+
   POLL_EVERY = 59 # Once a minute with ~1s request time
   RETRY_AFTER = 5
 
@@ -179,11 +159,6 @@ class Poller
 
   def play(sound)
     `afplay /System/Library/PrivateFrameworks/ScreenReader.framework/Versions/A/Resources/Sounds/#{sound}.aiff &`
-  end
-
-  def timestamp
-    # 2020-05-23T18:17:56.715Z
-    Time.now.utc.strftime('%Y-%m-%dT%H:%M:%S.000Z')
   end
 
   def poll
